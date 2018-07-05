@@ -1,74 +1,106 @@
 import os
+import slackclient
 import time
-import re
-from slackclient import SlackClient
+import random
 
 
-# instantiate Slack client
-slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
-# starterbot's user ID in Slack: value is assigned after the bot starts up
-starterbot_id = None
+SOCKET_DELAY = 1
 
-# constants
-RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
-EXAMPLE_COMMAND = "do"
-MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
+BOT_SLACK_NAME = os.environ.get('BOT_SLACK_NAME')
+BOT_SLACK_TOKEN = os.environ.get('BOT_SLACK_TOKEN')
+BOT_SLACK_ID = os.environ.get('BOT_SLACK_ID')
+
+bot_slack_client = slackclient.SlackClient(BOT_SLACK_TOKEN)
 
 
-def parse_bot_commands(slack_events):
-    """
-        Parses a list of events coming from the Slack RTM API to find bot commands.
-        If a bot command is found, this function returns a tuple of command and channel.
-        If its not found, then this function returns None, None.
-    """
-    for event in slack_events:
-        if event["type"] == "message" and not "subtype" in event:
-            user_id, message = parse_direct_mention(event["text"])
-            if user_id == starterbot_id:
-                return message, event["channel"]
-    return None, None
+# TODO SLACK Specific
+def is_private(event):
+    """Checks if on a private slack channel"""
+    channel = event.get('channel')
+    return channel.startswith('D')
 
 
-def parse_direct_mention(message_text):
-    """
-        Finds a direct mention (a mention that is at the beginning) in message text
-        and returns the user ID which was mentioned. If there is no direct mention, returns None
-    """
-    matches = re.search(MENTION_REGEX, message_text)
-    # the first group contains the username, the second group contains the remaining message
-    return (matches.group(1), matches.group(2).strip()) if matches else (None, None)
+def post_message(message, channel):
+    bot_slack_client.api_call('chat.postMessage', channel=channel, text=message, as_user=True)
 
 
-def handle_command(command, channel):
-    """
-        Executes bot command if the command is known
-    """
-    # Default response is help text for the user
-    default_response = "Not sure what you mean. Try *{}*.".format(EXAMPLE_COMMAND)
-
-    # Finds and executes the given command, filling in response
-    response = None
-    # This is where you start to implement more commands!
-    if command.startswith(EXAMPLE_COMMAND):
-        response = "Sure...write some more code then I can do that!"
-
-    # Sends the response back to the channel
-    slack_client.api_call(
-        "chat.postMessage",
-        channel=channel,
-        text=response or default_response
-    )
+# how the bot is mentioned on slack
+def get_mention(user):
+    return '<@{user}>'.format(user=user)
 
 
-if __name__ == "__main__":
-    if slack_client.rtm_connect(with_team_state=False):
-        print("Starter Bot connected and running!")
-        # Read bot's user ID by calling Web API method `auth.test`
-        starterbot_id = slack_client.api_call("auth.test")["user_id"]
+bot_slack_mention = get_mention(BOT_SLACK_ID)
+
+
+# TODO Language Specific
+def is_for_me(event):
+    """Know if the message is dedicated to me"""
+    # check if not my own event
+    type = event.get('type')
+    if type and type == 'message' and not(event.get('user')==BOT_SLACK_ID):
+        if is_private(event):
+            return True
+        text = event.get('text')
+        channel = event.get('channel')
+        if bot_slack_mention in text.strip().split():
+            return True
+
+
+def say_hi(user_mention):
+    """Say Hi to a user by formatting their mention"""
+    response_template = random.choice(['Sup, {mention}...',
+                                       'Yo!',
+                                       'Hola {mention}',
+                                       'Bonjour!'])
+    return response_template.format(mention=user_mention)
+
+
+def say_bye(user_mention):
+    """Say Goodbye to a user"""
+    response_template = random.choice(['see you later, alligator...',
+                                       'adios amigo',
+                                       'Bye {mention}!',
+                                       'Au revoir!'])
+    return response_template.format(mention=user_mention)
+
+
+def is_hi(message):
+    tokens = [word.lower() for word in message.strip().split()]
+    return any(g in tokens
+               for g in ['hello', 'bonjour', 'hey', 'hi', 'sup', 'morning', 'hola', 'ohai', 'yo'])
+
+
+def is_bye(message):
+    tokens = [word.lower() for word in message.strip().split()]
+    return any(g in tokens
+               for g in ['bye', 'goodbye', 'revoir', 'adios', 'later', 'cya'])
+
+
+def handle_message(message, user, channel):
+    if is_hi(message):
+        user_mention = get_mention(user)
+        post_message(message=say_hi(user_mention), channel=channel)
+    elif is_bye(message):
+        user_mention = get_mention(user)
+        post_message(message=say_bye(user_mention), channel=channel)
+
+
+# Bot Specific
+def run():
+    if bot_slack_client.rtm_connect():
+        print('[.] Valet de Machin is ON...')
         while True:
-            command, channel = parse_bot_commands(slack_client.rtm_read())
-            if command:
-                handle_command(command, channel)
-            time.sleep(RTM_READ_DELAY)
+            event_list = bot_slack_client.rtm_read()
+            if len(event_list) > 0:
+                for event in event_list:
+                    print(event)
+                    # print (event)
+                    if is_for_me(event):
+                        handle_message(message=event.get('text'), user=event.get('user'), channel=event.get('channel'))
+            time.sleep(SOCKET_DELAY)
     else:
-        print("Connection failed. Exception traceback printed above.")
+        print('[!] Connection to Slack failed! (Have you sourced the environment variables?)')
+
+
+if __name__=='__main__':
+    run()
