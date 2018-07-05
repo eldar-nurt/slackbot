@@ -3,7 +3,7 @@ import slackclient
 import time
 import random
 
-
+# Nice bot without hooks
 SOCKET_DELAY = 1
 
 BOT_SLACK_NAME = os.environ.get('BOT_SLACK_NAME')
