@@ -18,7 +18,7 @@ def start():
     return 'jopa'
 
 
-@app.route('/hello-there', methods=['GET'])
+@app.route('/hello-there', methods=['GET', 'POST'])
 def hello_there():
     if not is_request_valid(request):
         abort(400)
@@ -29,5 +29,5 @@ def hello_there():
     )
 
 
-# if __name__ == '__main__':
-#     app.run(port='5000', host='0.0.0.0')
+if __name__ == '__main__':
+    app.run(port='5000', host='0.0.0.0')
