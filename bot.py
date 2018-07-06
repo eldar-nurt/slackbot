@@ -13,6 +13,13 @@ def is_request_valid(request):
     return is_token_valid and is_team_id_valid
 
 
+@app.route('/', methods=['POST'])
+def start():
+    return jsonify(
+        hello='True',
+    )
+
+
 @app.route('/hello-there', methods=['POST'])
 def hello_there():
     if not is_request_valid(request):
