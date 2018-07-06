@@ -1,1 +1,1 @@
-slackbot: nohup flask run
+web: gunicorn bot:bot
