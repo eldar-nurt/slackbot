@@ -13,14 +13,12 @@ def is_request_valid(request):
     return is_token_valid and is_team_id_valid
 
 
-@app.route('/', methods=['POST'])
+@app.route('/jopa', methods=['POST', 'GET'])
 def start():
-    return jsonify(
-        hello='True',
-    )
+    return 'jopa'
 
 
-@app.route('/hello-there', methods=['POST'])
+@app.route('/hello-there', methods=['GET'])
 def hello_there():
     if not is_request_valid(request):
         abort(400)
@@ -32,5 +30,4 @@ def hello_there():
 
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 80))
-    app.run(debug=False, port=port, host='0.0.0.0')
+    app.run(port='8080', host='0.0.0.0')
