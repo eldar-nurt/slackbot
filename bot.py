@@ -13,7 +13,7 @@ def is_request_valid(request):
     return is_token_valid and is_team_id_valid
 
 
-@app.route('/jopa', methods=['POST', 'GET'])
+@app.route('/', methods=['POST', 'GET'])
 def start():
     return 'jopa'
 
@@ -29,5 +29,5 @@ def hello_there():
     )
 
 
-if __name__ == '__main__':
-    app.run(port='5000', host='0.0.0.0')
+# if __name__ == '__main__':
+#     app.run(port='5000', host='0.0.0.0')

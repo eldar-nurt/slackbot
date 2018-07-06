@@ -1,1 +1,1 @@
-slackbot: nohup python bot.py
+slackbot: gunicorn bot:app
