@@ -1,1 +1,1 @@
-slackbot: nohup python3 bot.py
+slackbot: nohup bot.py flask run
